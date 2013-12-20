@@ -109,7 +109,7 @@ namespace ExternalSorting
 		{
 			var maxCharCount = _encoding.GetMaxCharCount((int) _buffer.Length);
 			if (maxCharCount > _charBuf.Length)
-				_charBuf = new char[maxCharCount];
+				_charBuf = new char[Utils.NearestPowerOfTwo(maxCharCount)];
 		}
 	}
 }

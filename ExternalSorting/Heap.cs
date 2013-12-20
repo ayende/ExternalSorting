@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace ExternalSorting
 {
 	/// <summary>
-	/// Fixed size heap that supports duplicates and allow to get the smallest value
+	/// Fixed size heap that supports duplicates and allow to get the smallest Value
 	/// from the heap
 	/// </summary>
 	public class Heap<T>
