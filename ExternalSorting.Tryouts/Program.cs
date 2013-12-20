@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,9 +12,19 @@ namespace ExternalSorting.Tryouts
 		static void Main(string[] args)
 		{
 			var options = new DirectoryExternalStorageOptions("indexing");
-			var input = File.OpenRead(@"c:\work\ExternalSorting\ExternalSorting.Tests\users.csv");
-			var sorter = new ExternalSorter(input, options, 7, 10);
+			var input = File.OpenRead(@"C:\Users\Ayende\Downloads\Crimes_-_2001_to_present.csv");
+			var sorter = new ExternalSorter(input, options, new int[]
+			{
+				1,// case number
+				4, // ICHR
+
+			});
+
+			var sp = Stopwatch.StartNew();
+
 			sorter.Sort();
+
+			Console.WriteLine(sp.Elapsed);
 		}
 	}
 }

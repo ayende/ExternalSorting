@@ -9,12 +9,12 @@ namespace ExternalSorting
 	/// </summary>
 	public class Heap<T>
 	{
-		private readonly IComparer<T> _comparer;
+		private readonly Comparison<T> _comparer;
 		private readonly T[] _values;
 
 		public int Count { get; private set; }
 
-		public Heap(int size, IComparer<T> comparer)
+		public Heap(int size, Comparison<T> comparer)
 		{
 			_comparer = comparer;
 			_values = new T[size];
@@ -36,7 +36,7 @@ namespace ExternalSorting
 			while (index > 0)
 			{
 				var parentIndex = (index - 1) / 2;
-				if (_comparer.Compare(_values[index], _values[parentIndex]) > 0)
+				if (_comparer(_values[index], _values[parentIndex]) > 0)
 					break;
 				var parent = _values[parentIndex];
 				_values[parentIndex] = _values[index];
@@ -52,7 +52,7 @@ namespace ExternalSorting
 			while (childIndex < Count)
 			{
 				if (childIndex + 1 < Count &&
-					_comparer.Compare(_values[childIndex], _values[childIndex + 1]) > 0)
+					_comparer(_values[childIndex], _values[childIndex + 1]) > 0)
 				{
 					childIndex++;
 				}

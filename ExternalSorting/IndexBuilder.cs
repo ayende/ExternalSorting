@@ -20,7 +20,7 @@ namespace ExternalSorting
 	{
 		private readonly Stream _output;
 		private readonly Encoding _encoding;
-		private readonly byte[] _buffer = new byte[4096];
+		private readonly byte[] _buffer = new byte[IndexPagedReader.PageSize];
 		private int _bufferPos;
 
 		public IndexBuilder(Stream output, Encoding encoding)
@@ -29,10 +29,9 @@ namespace ExternalSorting
 			_encoding = encoding;
 		}
 
-		public unsafe void Add(ArraySegment<char> value, long pos)
+		public unsafe void Add(IndexEntry entry)
 		{
-			Console.WriteLine(new string(value.Array, value.Offset, value.Count));
-			var byteCount = _encoding.GetByteCount(value.Array, value.Offset, value.Count);
+			var byteCount = _encoding.GetByteCount(entry.Value.Array, entry.Value.Offset, entry.Value.Count);
 
 			var requiredSize = (byteCount+sizeof(long) + sizeof(short));
 			if (requiredSize > 4094)
@@ -47,9 +46,9 @@ namespace ExternalSorting
 			{
 				*((short*) (bp+_bufferPos)) = (short) byteCount;
 				_bufferPos += sizeof (short);
-				_encoding.GetBytes(value.Array, value.Offset, value.Count, _buffer, _bufferPos);
+				_encoding.GetBytes(entry.Value.Array, entry.Value.Offset, entry.Value.Count, _buffer, _bufferPos);
 				_bufferPos += byteCount;
-				*((long*)(bp + _bufferPos)) = pos;
+				*((long*)(bp + _bufferPos)) = entry.Position;
 				_bufferPos += sizeof (long);
 			}
 		}

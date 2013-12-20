@@ -11,9 +11,10 @@ namespace ExternalSorting
 		public long MaxHeldMemory = 1024 * 1024 * 64;
 		public Encoding Encoding = Encoding.UTF8;
 
-		public abstract Stream Create(int index, long counter);
+		public abstract Stream Create(int index);
+		public abstract Stream CreatePartial(int index, long counter);
 
-		public abstract List<Stream> GetAllFor(int index);
+		public abstract IEnumerable<Stream> GetAllPartialsFor(int index);
 	}
 
 	public class DirectoryExternalStorageOptions : ExternalStorageOptions
@@ -27,7 +28,13 @@ namespace ExternalSorting
 				Directory.CreateDirectory(_basePath);
 		}
 
-		public override Stream Create(int index, long counter)
+		public override Stream Create(int index)
+		{
+			return File.Create(Path.Combine(_basePath, index + ".index"));
+		
+		}
+
+		public override Stream CreatePartial(int index, long counter)
 		{
 			var path = Path.Combine(_basePath, index.ToString(CultureInfo.InvariantCulture));
 			if (Directory.Exists(path) == false)
@@ -35,11 +42,10 @@ namespace ExternalSorting
 			return File.Create(Path.Combine(path, counter + ".index-part"));
 		}
 
-		public override List<Stream> GetAllFor(int index)
+		public override IEnumerable<Stream> GetAllPartialsFor(int index)
 		{
 			return Directory.GetFiles(Path.Combine(_basePath, index.ToString(CultureInfo.InvariantCulture)), "*.index-part")
-				.Select(file => (Stream)File.OpenRead(file))
-				.ToList();
+				.Select(file => (Stream) File.OpenRead(file));
 		}
 	}
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace ExternalSorting
 {
@@ -17,13 +18,6 @@ namespace ExternalSorting
 		{
 			public readonly List<IndexEntry> Values = new List<IndexEntry>();
 			public long Counter;
-		}
-
-		public class IndexEntry
-		{
-			public ArraySegment<char> Value;
-			public long Position;
-
 		}
 
 		public ExternalSorter(Stream csv, ExternalStorageOptions options, params int[] columns)
@@ -54,11 +48,13 @@ namespace ExternalSorting
 					var value = result.Values[index];
 					var indexState = _indexes[index];
 					var checkout = _pool.Checkout(value.Count);
-					Buffer.BlockCopy(value.Array, value.Offset, checkout, 0, value.Count);
+					Buffer.BlockCopy(value.Array, value.Offset * sizeof(char), checkout, 0, value.Count * sizeof(char));
+					var arraySegment = new ArraySegment<char>(checkout, 0, value.Count);
+
 					indexState.Values.Add(new IndexEntry
 					{
 						Position = result.Position,
-						Value = new ArraySegment<char>(checkout, 0, value.Count)
+						Value = arraySegment
 					});
 					_heldMemory += value.Count;
 				}
@@ -69,6 +65,55 @@ namespace ExternalSorting
 				}
 			}
 			FlushIntermediateIndexes();
+
+			MergePartialIndexes();
+		}
+
+		private void MergePartialIndexes()
+		{
+			for (int index = 0; index < _indexes.Count; index++)
+			{
+				var partialReaders = _options.GetAllPartialsFor(index)
+					.Select(x => new IndexPagedReader(x, _options.Encoding))
+					.ToList();
+
+				var heap = new Heap<HeapEntry>(partialReaders.Count, (x, y) => CompareIndexEntries(x.IndexEntry, y.IndexEntry));
+				foreach (var reader in partialReaders)
+				{
+					var entry = reader.Read();
+					if (entry == null) // empty reader?
+						continue;
+					heap.Enqueue(new HeapEntry
+					{
+						Reader = reader,
+						IndexEntry = entry
+					});
+				}
+				using (var stream = _options.Create(index))
+				using (var builder = new IndexBuilder(stream, _options.Encoding))
+				{
+					while (heap.Count > 0)
+					{
+						var heapEntry = heap.Dequeue();
+						builder.Add(heapEntry.IndexEntry);
+						heapEntry.IndexEntry = heapEntry.Reader.Read();
+						if (heapEntry.IndexEntry == null)
+						{
+							if (heapEntry.Reader.Page +1 >= heapEntry.Reader.NumberOfPages)
+								continue;
+							heapEntry.Reader.Page++;
+							heapEntry.IndexEntry = heapEntry.Reader.Read();
+						}
+						heap.Enqueue(heapEntry);
+					}
+				}
+			}
+		}
+
+		private class HeapEntry
+		{
+			public IndexPagedReader Reader;
+			public IndexEntry IndexEntry;
 		}
 
 		private void FlushIntermediateIndexes()
@@ -78,12 +123,12 @@ namespace ExternalSorting
 				var indexState = _indexes[index];
 				indexState.Values.Sort(CompareIndexEntries);
 				indexState.Counter++;
-				using (var stream = _options.Create(index, indexState.Counter))
+				using (var stream = _options.CreatePartial(index, indexState.Counter))
 				using (var indexBuilder = new IndexBuilder(stream, _options.Encoding))
 				{
 					foreach (var indexEntry in indexState.Values)
 					{
-						indexBuilder.Add(indexEntry.Value, indexEntry.Position);
+						indexBuilder.Add(indexEntry);
 						_pool.Return(indexEntry.Value.Array);
 					}
 					indexState.Values.Clear();

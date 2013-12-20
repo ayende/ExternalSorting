@@ -13,8 +13,6 @@ namespace ExternalSorting
 		private readonly Result _result;
 		private char[] _charBuf;
 		private readonly MemoryStream _buffer;
-		private bool _lastCharWasLF;
-
 
 		/// <summary>
 		/// Required: columns not empty and is in ascending order
@@ -31,7 +29,6 @@ namespace ExternalSorting
 
 			_charBuf = new char[0];
 			_buffer = new MemoryStream();
-			_lastCharWasLF = false;
 		}
 
 		public class Result
@@ -48,14 +45,12 @@ namespace ExternalSorting
 				if (b == -1)
 					yield break; // we ignore the last line if it doesn't end with \r\n
 
-				if (!_lastCharWasLF || b != '\n')
+				if (b != '\n')
 				{
-					_lastCharWasLF = b == '\r';
 					_buffer.WriteByte((byte) b);
 					continue;
 				}
 
-				_lastCharWasLF = false;
 
 				_result.Position = _input.Position;
 				_result.Values.Clear();
@@ -64,7 +59,6 @@ namespace ExternalSorting
 				if (_buffer.Length == 1)
 				{
 					_buffer.SetLength(0);
-					_lastCharWasLF = false;
 					continue;
 				}
 
@@ -94,11 +88,13 @@ namespace ExternalSorting
 				if (_columns[interestingColumnPos] == currentColumn)
 				{
 					interestingColumnPos++;
-					_result.Values.Add(_charBuf[columnPos] != '"'
+					var value = _charBuf[columnPos] != '"'
 						// not quoted
 						? new ArraySegment<char>(_charBuf, columnPos, (i - columnPos))
 						// quoted
-						: new ArraySegment<char>(_charBuf, columnPos + 1, (i - columnPos) - 2));
+						: new ArraySegment<char>(_charBuf, columnPos + 1, (i - columnPos) - 2);
+				
+					_result.Values.Add(value);
 				}
 				currentColumn++;
 				columnPos = i+1;
