@@ -8,7 +8,7 @@ namespace ExternalSorting
 {
 	public abstract class ExternalStorageOptions
 	{
-		public long MaxHeldMemory = 1024 * 1024 * 64;
+		public long FlushIndexesInternval = 1024*1024*64;
 		public Encoding Encoding = Encoding.UTF8;
 
 		public abstract Stream Create(int index);
@@ -31,7 +31,7 @@ namespace ExternalSorting
 		public override Stream Create(int index)
 		{
 			return File.Create(Path.Combine(_basePath, index + ".index"));
-		
+
 		}
 
 		public override Stream CreatePartial(int index, long counter)
@@ -45,7 +45,7 @@ namespace ExternalSorting
 		public override IEnumerable<Stream> GetAllPartialsFor(int index)
 		{
 			return Directory.GetFiles(Path.Combine(_basePath, index.ToString(CultureInfo.InvariantCulture)), "*.index-part")
-				.Select(file => (Stream) File.OpenRead(file));
+				.Select(file => (Stream)File.OpenRead(file));
 		}
 	}
 }

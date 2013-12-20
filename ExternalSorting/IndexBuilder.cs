@@ -37,7 +37,7 @@ namespace ExternalSorting
 			if (requiredSize > 4094)
 				throw new InvalidOperationException("Value too large");
 
-			if (requiredSize > _buffer.Length)
+			if (_bufferPos + requiredSize > _buffer.Length)
 			{
 				Flush();
 			}

@@ -11,7 +11,6 @@ namespace ExternalSorting
 		private readonly ExternalStorageOptions _options;
 		private readonly int[] _columns;
 		private readonly CharPool _pool = new CharPool();
-		private long _heldMemory;
 		private readonly List<IndexState> _indexes = new List<IndexState>();
 
 		private class IndexState
@@ -35,6 +34,7 @@ namespace ExternalSorting
 		{
 			var reader = new SourceReader(_csv, _options.Encoding, _columns);
 			var readHeader = false;
+			long lastFlushPosition = 0;
 			foreach (var result in reader.ReadFromStream())
 			{
 				if (readHeader == false)
@@ -42,7 +42,6 @@ namespace ExternalSorting
 					readHeader = true;
 					continue;
 				}
-
 				for (int index = 0; index < result.Values.Count; index++)
 				{
 					var value = result.Values[index];
@@ -56,15 +55,17 @@ namespace ExternalSorting
 						Position = result.Position,
 						Value = arraySegment
 					});
-					_heldMemory += value.Count;
 				}
 
-				if (_heldMemory >= _options.MaxHeldMemory)
+				if ((_csv.Position - lastFlushPosition) > _options.FlushIndexesInternval)
 				{
+					lastFlushPosition = _csv.Position;
 					FlushIntermediateIndexes();
+					Console.Write("\r{0:#,#;;0} kb out of {1:#,#;;0} kb = {2:P2}", result.Position / 1024, _csv.Length / 1024, result.Position / (decimal)_csv.Length);
 				}
 			}
 			FlushIntermediateIndexes();
+			Console.WriteLine();
 
 			MergePartialIndexes();
 		}
