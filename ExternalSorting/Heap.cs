@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-using System.Xml.Serialization;
 
 namespace ExternalSorting
 {
+	/// <summary>
+	/// Fixed size heap that supports duplicates and allow to get the smallest value
+	/// from the heap
+	/// </summary>
 	public class Heap<T>
 	{
 		private readonly IComparer<T> _comparer;
