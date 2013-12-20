@@ -5,7 +5,8 @@ namespace ExternalSorting
 {
 	/// <summary>
 	/// This class writes to the output stream the values.
-	/// It is assumed that the values are sorted, and that no single value is greater than 4094 bytes
+	/// It is assumed that the values are sorted (although that isn't actually required for what we are doing
+	/// No single value is greater than 4094 bytes
 	/// The values are written in pages, so that each page may contain multiple values, but no value will ever
 	/// cross a page boundary.
 	/// The format is:

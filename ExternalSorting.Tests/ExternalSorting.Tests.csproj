@@ -44,9 +44,11 @@
   <ItemGroup>
     <Compile Include="HeapTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ReadingText.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <EmbeddedResource Include="users.csv" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ExternalSorting\ExternalSorting.csproj">
