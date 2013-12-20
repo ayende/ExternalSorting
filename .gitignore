@@ -1,0 +1,7 @@
+/*.suo
+obj/
+bin/
+packages/
+
+/Nevar.Tests/*.user
+/Nevar/*.user
