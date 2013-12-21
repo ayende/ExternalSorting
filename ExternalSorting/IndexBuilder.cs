@@ -6,63 +6,48 @@ namespace ExternalSorting
 {
 	/// <summary>
 	/// This class writes to the output stream the values.
-	/// It is assumed that the values are sorted (although that isn't actually required for what we are doing
-	/// No single Value is greater than 4086 bytes
-	/// The values are written in pages, so that each page may contain multiple values, but no Value will ever
-	/// cross a page boundary.
-	/// The format is:
-	/// short - len
-	/// byte[len] - data
-	/// long - line position
-	/// end of page is when the page size is over or we encounter a len of 0
+	/// It is assumed that the values are sorted (although that isn't actually required for what we are doing in this class, it is 
+	/// important elsewhere)
 	/// </summary>
 	public class IndexBuilder : IDisposable
 	{
-		private readonly Stream _output;
-		private readonly Encoding _encoding;
-		private readonly byte[] _buffer = new byte[IndexPagedReader.PageSize];
-		private int _bufferPos;
+		private readonly BinaryWriter _writer;
+		private readonly char[] _buffer = new char[64];
+		private static readonly char[] _lineBreak = { '\r', '\n' };
 
 		public IndexBuilder(Stream output, Encoding encoding)
 		{
-			_output = output;
-			_encoding = encoding;
+			_writer = new BinaryWriter(output, encoding);
 		}
 
-		public unsafe void Add(IndexEntry entry)
+		public void Add(IndexEntry entry)
 		{
-			var byteCount = _encoding.GetByteCount(entry.Value.Array, entry.Value.Offset, entry.Value.Count);
-
-			var requiredSize = (byteCount+sizeof(long) + sizeof(short));
-			if (requiredSize > 4094)
-				throw new InvalidOperationException("Value too large");
-
-			if (_bufferPos + requiredSize > _buffer.Length)
+			for (int i = 0; i < entry.Value.Count; i++)
 			{
-				Flush();
+				_writer.Write(entry.Value.Array[i + entry.Value.Offset]);
 			}
-
-			fixed (byte* bp = _buffer)
+			_writer.Write(',');
+			var pos = entry.Position;
+			int digits = 0;
+			do
 			{
-				*((short*) (bp+_bufferPos)) = (short) byteCount;
-				_bufferPos += sizeof (short);
-				_encoding.GetBytes(entry.Value.Array, entry.Value.Offset, entry.Value.Count, _buffer, _bufferPos);
-				_bufferPos += byteCount;
-				*((long*)(bp + _bufferPos)) = entry.Position;
-				_bufferPos += sizeof (long);
-			}
-		}
+				var remaining = (int) (pos%10);
+				pos /= 10;
+				_buffer[digits++] = "0123456789"[remaining];
+			} while (pos > 0);
 
-		private void Flush()
-		{
-			_output.Write(_buffer, 0, _buffer.Length);
-			Array.Clear(_buffer, 0, _buffer.Length);
-			_bufferPos = 0;
+			Array.Reverse(_buffer,0,digits);
+
+			_writer.Write(_buffer, 0, digits);
+			
+			_writer.Write(_lineBreak);
 		}
 
 		public void Dispose()
 		{
-			Flush();
+			_writer.Flush();
+
+			// explicitly do not dispose writer
 		}
 	}
 }

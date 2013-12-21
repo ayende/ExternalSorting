@@ -15,6 +15,7 @@ namespace ExternalSorting
 		public abstract Stream CreatePartial(int index, long counter);
 
 		public abstract IEnumerable<Stream> GetAllPartialsFor(int index);
+		public abstract void DeleteAllPartialsFor(int index);
 	}
 
 	public class DirectoryExternalStorageOptions : ExternalStorageOptions
@@ -39,13 +40,20 @@ namespace ExternalSorting
 			var path = Path.Combine(_basePath, index.ToString(CultureInfo.InvariantCulture));
 			if (Directory.Exists(path) == false)
 				Directory.CreateDirectory(path);
-			return File.Create(Path.Combine(path, counter + ".index-part"));
+			return new FileStream(Path.Combine(path, counter + ".index-part"), FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
 		}
 
 		public override IEnumerable<Stream> GetAllPartialsFor(int index)
 		{
 			return Directory.GetFiles(Path.Combine(_basePath, index.ToString(CultureInfo.InvariantCulture)), "*.index-part")
 				.Select(file => (Stream)File.OpenRead(file));
+		}
+
+		public override void DeleteAllPartialsFor(int index)
+		{
+			var path = Path.Combine(_basePath, index.ToString(CultureInfo.InvariantCulture));
+			if (Directory.Exists(path) == false)
+				Directory.Delete(path, true);
 		}
 	}
 }
